@@ -41,8 +41,8 @@ let grid = []; //important
 let grid_row = [];
 
 const draw_grid = (rows,cols) => {
-    for(let col_index = 0; col_index < cols; col_index++) {
-        for(let row_index = 0; row_index < rows; row_index++) {
+    for(let row_index = 0; row_index < rows; row_index++) {
+        for(let col_index = 0; col_index < cols; col_index++) {
             // creating grid matrix for future reference
             grid_row.push({
                 visited : false
@@ -69,77 +69,124 @@ const wait = (time) => {
     })
 };
 
-let frontier = [{coords:[0,0],source:[0,0]}];
+let frontier = [[0,0]];
+//coords [row_index,col_index], source [row_index,col_index];
 
-const generate_maze = async (col_index,row_index,frontier,grid) => {
-    //base case: if there are no frontier cells remaining that means the entire maze has been covered
+const generate_maze = async (frontier,grid) => {
+
+    for(let iter = 0; iter < frontier.length; iter++) {
+        ctx.fillStyle = "purple";
+        ctx.fillRect(x_coord(frontier[iter][1]),y_coord(frontier[iter][0]),cell_width,cell_height);
+    }
+    await wait(500);
+
+    //choose a random frontier
+    let chosen_frontier = Math.floor(Math.random()*frontier.length);
+
+    
+    //col_index and row_index of current cell
+    row_index = frontier[chosen_frontier][0];
+    col_index = frontier[chosen_frontier][1];
+    
+    ctx.fillStyle = "black";
+    ctx.fillRect(x_coord(col_index),y_coord(row_index),cell_width,cell_height);
+    await wait(500);
+
+    ctx.fillStyle = "green";
+    ctx.fillRect(x_coord(col_index),y_coord(row_index),cell_width,cell_height);
+    await wait(500);
+
+    //pop out the chosen frontier(current cell) from the frontier list
+    let temp = frontier[chosen_frontier];
+    frontier[chosen_frontier] = frontier[frontier.length - 1];
+    frontier[frontier.length - 1] = temp;
+    frontier.pop(); 
+
+    //mark the chosen frotier as visited
+    grid[row_index][col_index].visited = true;
+
+    //looking for neighbors to make a connection or marking them as frontiers
+    let possible_path = [];
+
+    //down
+    if(row_index + 1 < rows) {
+        if(grid[row_index +1][col_index].visited === false) {
+            if(!frontier.find((element) => { if(element[0] === row_index + 1 && element[1] === col_index) return true;}))
+                frontier.push([row_index + 1,col_index]);
+        }
+        else {
+            possible_path.push([row_index + 1,col_index]);
+        }
+    }
+    //right
+    if(col_index + 1 < cols) {
+        if(grid[row_index][col_index + 1].visited === false) {
+            if(!frontier.find((element) => { if(element[0] === row_index && element[1] === col_index + 1) return true;}))
+                frontier.push([row_index,col_index + 1]);
+        }
+        else {
+            possible_path.push([row_index,col_index + 1]);
+        }
+    }
+    //up
+    if(row_index - 1 >= 0) {
+        if(grid[row_index - 1][col_index].visited === false) {
+            if(!frontier.find((element) => { if(element[0] === row_index -1 && element[1] === col_index) return true; }))
+                frontier.push([row_index -1,col_index]);
+        }
+        else {
+            possible_path.push([row_index -1,col_index]);
+        }
+    }
+    //left
+    if(col_index - 1 >= 0) {
+        if(grid[row_index][col_index - 1].visited === false) {
+            if(!frontier.find((element) => { if(element[0] === row_index && element[1] === col_index - 1) return true; }))
+                frontier.push([row_index,col_index - 1]);
+        }
+        else {
+            possible_path.push([row_index,col_index - 1]);
+        }
+    }
+    //connnect
+    if(possible_path.length !== 0) {
+        let cell_index = Math.floor(Math.random()*possible_path.length);
+        let source_row_index = possible_path[cell_index][0];
+        let source_col_index = possible_path[cell_index][1];
+
+        let x_pos,y_pos;
+
+        if(row_index - source_row_index === 1) {
+            //is source up?
+            x_pos = x_coord(col_index);
+            y_pos = y_coord(row_index);
+            draw_line(x_pos,y_pos,x_pos + cell_width,y_pos,"white");
+        }
+        else if(row_index - source_row_index === -1) {
+            //is source down?
+            x_pos = x_coord(source_col_index);
+            y_pos = y_coord(source_row_index);
+            draw_line(x_pos,y_pos,x_pos + cell_width,y_pos,"white");
+        }
+        else if(col_index - source_col_index === 1) {
+            //is source left?
+            x_pos = x_coord(col_index);
+            y_pos = y_coord(row_index);
+            draw_line(x_pos,y_pos,x_pos,y_pos + cell_height,"white");
+        }
+        else {
+            //is source right?
+            x_pos = x_coord(source_col_index);
+            y_pos = y_coord(source_row_index);
+            draw_line(x_pos,y_pos,x_pos,y_pos + cell_height,"white");
+        }
+    }
+    await wait(500);
+
     if(frontier.length === 0)
         return;
 
-    //mark current cell as visited first
-    grid[col_index][row_index].visited = true;
-    // ctx.fillStyle = "red";
-    // ctx.fillRect(x_coord(col_index),y_coord(row_index),cell_width,cell_height);
-
-    //check for available neighbors and add them as frontier cells
-    if(col_index + 1 < cols && grid[col_index + 1][row_index].visited === false)
-        frontier.push({coords : [col_index + 1, row_index], source : [col_index,row_index]});
-    if(col_index - 1 >= 0 && grid[col_index - 1][row_index].visited === false)
-        frontier.push({coords : [col_index - 1, row_index], source : [col_index,row_index]});
-    if(row_index + 1 < rows && grid[col_index][row_index + 1].visited === false)
-        frontier.push({coords : [col_index, row_index + 1], source : [col_index,row_index]});
-    if(row_index - 1 >= 0 && grid[col_index][row_index - 1].visited === false)
-        frontier.push({coords : [col_index, row_index - 1], source : [col_index,row_index]});
-
-    //pick a random cell out of the frontier cells
-    let chosen_frontier = Math.floor(Math.random() * frontier.length);
-
-    
-    //remove the wall between the source cell and the chosen frontier cell
-    let frontier_x = frontier[chosen_frontier].coords[0];
-    let frontier_y = frontier[chosen_frontier].coords[1];
-    let source_x = frontier[chosen_frontier].source[0];
-    let source_y = frontier[chosen_frontier].source[1];
-    
-    if(frontier_x - source_x === 1) {
-        //remove source right
-        let x_pos = x_coord(frontier_x);
-        let y_pos = y_coord(frontier_y);
-        draw_line(x_pos,y_pos,x_pos,y_pos + cell_height,"grey");
-    }
-    else if(frontier_x - source_x === -1) {
-        //remove source left
-        let x_pos = x_coord(source_x);
-        let y_pos = y_coord(source_y);
-        draw_line(x_pos,y_pos,x_pos,y_pos + cell_height,"grey");
-    }
-    else if(frontier_y - source_y === 1) {
-        //remove top
-        let x_pos = x_coord(frontier_x);
-        let y_pos = y_coord(frontier_y);
-        draw_line(x_pos,y_pos,x_pos + cell_width,y_pos,"grey");
-    }
-    else {
-        //remove bottom 
-        let x_pos = x_coord(source_x);
-        let y_pos = y_coord(source_y);
-        draw_line(x_pos,y_pos,x_pos + cell_width,y_pos,"grey");
-        
-    }
-
-    //remove the chosen frontier cell from the frontier cells list
-    if(chosen_frontier == frontier.length -1)
-        frontier.pop();
-    else {
-        let temp = frontier[chosen_frontier];
-        frontier[chosen_frontier] = frontier[frontier.length -1];
-        frontier[frontier.length - 1] = temp;
-        frontier.pop();
-    }
-    
-    //move to the chosen frontier cell
-    await wait(50);
-    generate_maze(frontier_x,frontier_y,frontier,grid);
+    generate_maze(frontier,grid);
 }
 
-generate_maze(0,0,frontier,grid);
+generate_maze(frontier,grid);
