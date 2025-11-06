@@ -1,3 +1,4 @@
+//!!important parameters of maze
 const height = 400;
 const width = 400;
 const rows = 10;
@@ -5,7 +6,7 @@ const cols = 10;
 const cell_height = height/rows;
 const cell_width = width/cols;
 
-const generate_canvas = (height,width) => {
+const generate_canvas = (width,height) => {
     const maze = document.getElementById("maze");
     let canvas = document.createElement("canvas");
     canvas.width = width;
@@ -14,11 +15,9 @@ const generate_canvas = (height,width) => {
     return canvas;
 };
 
-const canvas = generate_canvas(400,400);
+const canvas = generate_canvas(width,height);
 const ctx = canvas.getContext("2d");
 
-ctx.fillStyle = 'grey';
-ctx.fillRect(0,0,height,width);
 
 const x_coord = (col_index) => {
     return col_index * cell_width;
@@ -40,28 +39,40 @@ let grid = []; //important
 
 let grid_row = [];
 
-const draw_grid = (rows,cols) => {
-    for(let row_index = 0; row_index < rows; row_index++) {
-        for(let col_index = 0; col_index < cols; col_index++) {
-            // creating grid matrix for future reference
-            grid_row.push({
-                visited : false
-            });
+//initialize grid to all blocked
+for(let row_index = 0; row_index < rows; row_index++) {
+    for(let col_index = 0; col_index < cols; col_index++) {
+        // creating grid matrix for future reference
+        grid_row.push({
+            visited : false,
+            border : [true,true,true,true] //top right bottom left
+        });
+    }
+    grid.push(grid_row);
+    grid_row = [];
+}
 
+const draw_grid = (grid,color) => {
+    ctx.fillStyle = color;
+    ctx.fillRect(0,0,height,width);
+    for(let row_index = 0; row_index < grid.length; row_index++) {
+        for(let col_index = 0; col_index < grid[0].length ; col_index++) {
             //drawing the cell walls
             let x1 = x_coord(col_index);
             let y1 = y_coord(row_index);
-
-            draw_line(x1,y1,x1+cell_width,y1,"black");
-            draw_line(x1 + cell_width,y1,x1 + cell_width,y1 + cell_height,"black");
-            draw_line(x1 + cell_width,y1 + cell_height,x1, y1 + cell_height,"black");
-            draw_line(x1,y1 + cell_height,x1,y1,"black");
+            
+            if(grid[row_index][col_index].border[0])
+                draw_line(x1,y1,x1+cell_width,y1,"black");
+            if(grid[row_index][col_index].border[1])
+                draw_line(x1 + cell_width,y1,x1 + cell_width,y1 + cell_height,"black");
+            if(grid[row_index][col_index].border[2])
+                draw_line(x1 + cell_width,y1 + cell_height,x1, y1 + cell_height,"black");
+            if(grid[row_index][col_index].border[3])
+                draw_line(x1,y1 + cell_height,x1,y1,"black");
         }
-        grid.push(grid_row);
-        grid_row = [];
     }
 };
-draw_grid(rows,cols);
+draw_grid(grid,"grey");
 
 const wait = (time) => {
     return new Promise((resolve) => {
@@ -74,11 +85,12 @@ let frontier = [[0,0]];
 
 const generate_maze = async (frontier,grid) => {
 
+    //mark all the frontier cells as purple to show the choices available
     for(let iter = 0; iter < frontier.length; iter++) {
         ctx.fillStyle = "purple";
         ctx.fillRect(x_coord(frontier[iter][1]),y_coord(frontier[iter][0]),cell_width,cell_height);
     }
-    await wait(500);
+    await wait(100);
 
     //choose a random frontier
     let chosen_frontier = Math.floor(Math.random()*frontier.length);
@@ -88,14 +100,16 @@ const generate_maze = async (frontier,grid) => {
     row_index = frontier[chosen_frontier][0];
     col_index = frontier[chosen_frontier][1];
     
+    //mark the frontier cell chosen as black for visualization
     ctx.fillStyle = "black";
     ctx.fillRect(x_coord(col_index),y_coord(row_index),cell_width,cell_height);
-    await wait(500);
+    await wait(100);
 
-    ctx.fillStyle = "green";
+    //turn it back to purple 
+    ctx.fillStyle = "purple";
     ctx.fillRect(x_coord(col_index),y_coord(row_index),cell_width,cell_height);
-    await wait(500);
-
+    await wait(100);
+    
     //pop out the chosen frontier(current cell) from the frontier list
     let temp = frontier[chosen_frontier];
     frontier[chosen_frontier] = frontier[frontier.length - 1];
@@ -148,7 +162,8 @@ const generate_maze = async (frontier,grid) => {
             possible_path.push([row_index,col_index - 1]);
         }
     }
-    //connnect
+
+    //connnect the chosen frontier cell with the maze
     if(possible_path.length !== 0) {
         let cell_index = Math.floor(Math.random()*possible_path.length);
         let source_row_index = possible_path[cell_index][0];
@@ -158,31 +173,34 @@ const generate_maze = async (frontier,grid) => {
 
         if(row_index - source_row_index === 1) {
             //is source up?
-            x_pos = x_coord(col_index);
-            y_pos = y_coord(row_index);
-            draw_line(x_pos,y_pos,x_pos + cell_width,y_pos,"white");
+            grid[source_row_index][source_col_index].border[2] = false;
+            grid[row_index][col_index].border[0] = false;
         }
         else if(row_index - source_row_index === -1) {
             //is source down?
-            x_pos = x_coord(source_col_index);
-            y_pos = y_coord(source_row_index);
-            draw_line(x_pos,y_pos,x_pos + cell_width,y_pos,"white");
+            grid[source_row_index][source_col_index].border[0] = false;
+            grid[row_index][col_index].border[2] = false;
         }
         else if(col_index - source_col_index === 1) {
             //is source left?
-            x_pos = x_coord(col_index);
-            y_pos = y_coord(row_index);
-            draw_line(x_pos,y_pos,x_pos,y_pos + cell_height,"white");
+            grid[source_row_index][source_col_index].border[1] = false;
+            grid[row_index][col_index].border[3] = false;
         }
         else {
             //is source right?
-            x_pos = x_coord(source_col_index);
-            y_pos = y_coord(source_row_index);
-            draw_line(x_pos,y_pos,x_pos,y_pos + cell_height,"white");
+            grid[source_row_index][source_col_index].border[3] = false;
+            grid[row_index][col_index].border[1] = false;
         }
     }
-    await wait(500);
+    await wait(100);
 
+    //clear the canvas to update the grid
+    ctx.clearRect(0,0,width,height);
+    draw_grid(grid,"grey");
+
+    await wait(100);
+
+    //base case when there are no frontier cells
     if(frontier.length === 0)
         return;
 
