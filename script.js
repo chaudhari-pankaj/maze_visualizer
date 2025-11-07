@@ -5,6 +5,8 @@ const rows = 10;
 const cols = 10;
 const cell_height = height/rows;
 const cell_width = width/cols;
+//delay in milliseconds between each step for better visualization
+let delay = 0;
 
 const generate_canvas = (width,height) => {
     const maze = document.getElementById("maze");
@@ -14,10 +16,8 @@ const generate_canvas = (width,height) => {
     maze.appendChild(canvas);
     return canvas;
 };
-
 const canvas = generate_canvas(width,height);
 const ctx = canvas.getContext("2d");
-
 
 const x_coord = (col_index) => {
     return col_index * cell_width;
@@ -35,32 +35,38 @@ const draw_line = (x1,y1,x2,y2,color) => {
     ctx.stroke();
 };
 
+const fill_cell = (x1,y1,color) => {
+    ctx.fillStyle = color;
+    ctx.fillRect(x1,y1,cell_width,cell_height);
+}
+
 const wait = (time) => {
     return new Promise((resolve) => {
         setTimeout(resolve,time);
     })
 };
 
-let grid = []; //important
+const initialize_grid = () => {
+    let grid = [];
+    let grid_row = [];
 
-let grid_row = [];
-
-//initialize grid to all blocked
-for(let row_index = 0; row_index < rows; row_index++) {
-    for(let col_index = 0; col_index < cols; col_index++) {
-        // creating grid matrix for future reference
-        grid_row.push({
-            visited : false,
-            border : [true,true,true,true], //top right bottom left
-            visited_cost : rows + cols
-        });
+    for(let row_index = 0; row_index < rows; row_index++) {
+        for(let col_index = 0; col_index < cols; col_index++) {
+            // creating grid matrix for future reference
+            grid_row.push({
+                visited : false,
+                border : [true,true,true,true], //top right bottom left
+                visited_cost : rows + cols
+            });
+        }
+        grid.push(grid_row);
+        grid_row = [];
     }
-    grid.push(grid_row);
-    grid_row = [];
+    return grid;
 }
 
-const draw_grid = async (grid,color) => {
-    ctx.fillStyle = "grey";
+const draw_grid = async (grid,visited_cell_color,background_color) => {
+    ctx.fillStyle = background_color;
     ctx.fillRect(0,0,height,width);
     for(let row_index = 0; row_index < grid.length; row_index++) {
         for(let col_index = 0; col_index < grid[0].length ; col_index++) {
@@ -70,8 +76,7 @@ const draw_grid = async (grid,color) => {
             
             //coloring the visited cells differently
             if(grid[row_index][col_index].visited) {
-                ctx.fillStyle = color;
-                ctx.fillRect(x1,y1,cell_width,cell_height);
+                fill_cell(x1,y1,visited_cell_color);
             }
             //drawing the cell walls
             if(grid[row_index][col_index].border[0])
@@ -86,20 +91,15 @@ const draw_grid = async (grid,color) => {
         }
     }
 };
-draw_grid(grid,"grey");
-
-
-let frontier = [[0,0]];
-//coords [row_index,col_index], source [row_index,col_index];
-
 
 //randomized prim's algorithm
 const generate_maze = async (frontier,grid) => {
     
     //mark all the frontier cells as purple to show the choices available
     for(let iter = 0; iter < frontier.length; iter++) {
-        ctx.fillStyle = "rgba(49, 206, 1, 1)";
-        ctx.fillRect(x_coord(frontier[iter][1]),y_coord(frontier[iter][0]),cell_width,cell_height);
+        // ctx.fillStyle = "rgba(49, 206, 1, 1)";
+        // ctx.fillRect(x_coord(frontier[iter][1]),y_coord(frontier[iter][0]),cell_width,cell_height);
+        fill_cell(x_coord(frontier[iter][1]),y_coord(frontier[iter][0]),"rgba(49, 206, 1, 1)");
     }
     await wait(delay);
     
@@ -204,7 +204,7 @@ const generate_maze = async (frontier,grid) => {
     }
     
     //update the grid
-    draw_grid(grid,"blue");
+    draw_grid(grid,"blue","grey");
     
     await wait(delay);
     
@@ -215,17 +215,14 @@ const generate_maze = async (frontier,grid) => {
     generate_maze(frontier,grid);
 }
 
-//delay in milliseconds between each step for better visualization
-let delay = 0;
+const draw_empty_grid = () => {
+    let grid = initialize_grid();
+    draw_grid(grid,"grey","grey");
+}
 
-generate_maze(frontier,grid);
 
 //dfs
-let goal = [rows -1,cols -1];
-
-let solution_path = [];
-
-const dfs = async (row_index,col_index,grid) => {
+const dfs = async (row_index,col_index,solution_path,goal,grid) => {
     //checking if the current cell is out of bounds
     if(row_index + 1 > rows || row_index < 0 || col_index + 1 > cols || col_index < 0)
         return false;
@@ -233,11 +230,11 @@ const dfs = async (row_index,col_index,grid) => {
     //checking if the cell was previously visited
     if(grid[row_index][col_index].visited === true)
         return false;
-
+    
     //mark the current cell as visited;
     solution_path.push([row_index,col_index]);
     grid[row_index][col_index].visited = true;
-    draw_grid(grid,"green");
+    draw_grid(grid,"green","grey");
     await wait(50);
 
     //checking if the current cell has reached the goal
@@ -247,44 +244,77 @@ const dfs = async (row_index,col_index,grid) => {
 
     //down
     if(grid[row_index][col_index].border[2] === false) {
-        if(await dfs(row_index + 1,col_index,grid) === true)
+        if(await dfs(row_index + 1,col_index,solution_path,goal,grid) === true)
             return true;
     }
     //right
     if(grid[row_index][col_index].border[1] === false) {
-        if(await dfs(row_index,col_index + 1,grid) === true)
+        if(await dfs(row_index,col_index + 1,solution_path,goal,grid) === true)
             return true;
     }
     //up
     if(grid[row_index][col_index].border[0] === false) {
-        if(await dfs(row_index - 1,col_index,grid) === true)
+        if(await dfs(row_index - 1,col_index,solution_path,goal,grid) === true)
             return true;
     }
     //left
     if(grid[row_index][col_index].border[3] === false) {
-        if(await dfs(row_index,col_index -1,grid) === true)
+        if(await dfs(row_index,col_index -1,solution_path,goal,grid) === true)
             return true;
     }
 
     solution_path.pop();
-
+    
     return false;
 }
 
-let starting_cell = [0,0];
+// let cell_params[row_index][col_index] = {
+//     visited : true/false,
+//     cost : cost to reach from start_dfs,
+//     source : [row_index,col_index]
+// }
+
+//flow of functions
+draw_empty_grid();
+let grid = initialize_grid();
+
+const start_maze_generation = document.getElementById("generate_maze");
+start_maze_generation.addEventListener("click",() => {
+    grid = initialize_grid();
+    draw_grid(grid,"grey","grey");
+    let frontier = [[0,cols - 1]];
+    generate_maze(frontier,grid);
+});
 
 const start_dfs = document.getElementById("dfs");
 start_dfs.addEventListener('click',async () => {
+    let starting_cell = [0,0];
+    let goal = [rows -1,cols -1];
+    let solution_path = [];
     for(let row_index = 0; row_index < rows; row_index++) {
         for(let col_index = 0; col_index < cols; col_index++) {
             grid[row_index][col_index].visited = false;
         }
     }
-    await dfs(starting_cell[0],starting_cell[1],grid);
-
+    solution_path = [];
+    await dfs(starting_cell[0],starting_cell[1],solution_path,goal,grid);
+    
     for(let iter = solution_path.length - 1; iter >= 0; iter--) {
-        ctx.fillStyle = "purple";
-        ctx.fillRect(x_coord(solution_path[iter][1]),y_coord(solution_path[iter][0]),cell_width,cell_height);
+        let x_pos = x_coord(solution_path[iter][1]);
+        let y_pos = y_coord(solution_path[iter][0]);
+        fill_cell(x_pos,y_pos,"purple");
+        for(let inner_iter = 0; inner_iter < 4; inner_iter++) {
+            if(grid[solution_path[iter][0]][solution_path[iter][1]].border[inner_iter]) {
+                if(inner_iter === 0)
+                    draw_line(x_pos,y_pos,x_pos + cell_width,y_pos,"white");
+                else if(inner_iter === 1)
+                    draw_line(x_pos + cell_width,y_pos,x_pos + cell_width,y_pos + cell_height,"white");
+                else if(inner_iter === 2)
+                    draw_line(x_pos + cell_width,y_pos + cell_height,x_pos,y_pos + cell_height,"white");
+                else
+                    draw_line(x_pos,y_pos + cell_height,x_pos,y_pos,"white");
+            }
+        }
         await wait(50);
     }
     
@@ -294,10 +324,23 @@ start_dfs.addEventListener('click',async () => {
         }
     }
     
-    await draw_grid(grid,"grey");
-    
+    await draw_grid(grid,"grey","grey");
+
     for(let iter = solution_path.length - 1; iter >= 0; iter--) {
-        ctx.fillStyle = "purple";
-        ctx.fillRect(x_coord(solution_path[iter][1]),y_coord(solution_path[iter][0]),cell_width,cell_height);
+        let x_pos = x_coord(solution_path[iter][1]);
+        let y_pos = y_coord(solution_path[iter][0]);
+        fill_cell(x_pos,y_pos,"purple");
+        for(let inner_iter = 0; inner_iter < 4; inner_iter++) {
+            if(grid[solution_path[iter][0]][solution_path[iter][1]].border[inner_iter]) {
+                if(inner_iter === 0)
+                    draw_line(x_pos,y_pos,x_pos + cell_width,y_pos,"white");
+                else if(inner_iter === 1)
+                    draw_line(x_pos + cell_width,y_pos,x_pos + cell_width,y_pos + cell_height,"white");
+                else if(inner_iter === 2)
+                    draw_line(x_pos + cell_width,y_pos + cell_height,x_pos,y_pos + cell_height,"white");
+                else
+                    draw_line(x_pos,y_pos + cell_height,x_pos,y_pos,"white");
+            }
+        }
     }
 })

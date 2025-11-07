@@ -9,7 +9,7 @@ h1 {
     color : rgb(241, 204, 18);
 }
 
-#dfs{
+.buttons{
     background: yellow;
     border-radius: 1vw;
     align-items: center;
@@ -21,4 +21,9 @@ h1 {
     padding-left:2vw;
     padding-right:2vw;
     font-size: 2vw;
+}
+
+#options{
+    padding-top:1vw;
+    display:flex;
 }
