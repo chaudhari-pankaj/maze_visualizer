@@ -1,0 +1,24 @@
+body {
+    background-color: rgb(36, 36, 36);
+    padding-left : 40px;
+    font-family: monospace ;
+}
+
+h1 {
+    font-size : 4vw;
+    color : rgb(241, 204, 18);
+}
+
+#dfs{
+    background: yellow;
+    border-radius: 1vw;
+    align-items: center;
+    display: grid;
+    justify-content: center;
+    color: darkslategrey;
+    padding-top:0.5vw;
+    padding-bottom:0.5vw;
+    padding-left:2vw;
+    padding-right:2vw;
+    font-size: 2vw;
+}
