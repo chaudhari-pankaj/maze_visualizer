@@ -1,13 +1,14 @@
 //!!important parameters of maze visualizer
 const height = 500;
-const width = 500;
-const rows = 10;
-const cols = 10;
+const width = 500; 
+const rows = 20;
+const cols = 20;
 const cell_height = height/rows;
 const cell_width = width/cols;
-const starting_cell = [0,0];
-const goal = [rows -1,cols -1];
+const starting_cell = [1,1];
+const goal = [rows -2,cols -2];
 let delay = 10; //delay in milliseconds between each step for better visualization
+let generate_maze_delay = 0;
 
 const generate_canvas = (width,height) => {
     const maze = document.getElementById("maze");
@@ -57,7 +58,6 @@ const initialize_grid = () => {
             grid_row.push({
                 visited : false,
                 border : [true,true,true,true], //top right bottom left
-                visited_cost : rows + cols
             });
         }
         grid.push(grid_row);
@@ -98,11 +98,9 @@ const generate_maze = async (frontier,grid) => {
     
     //mark all the frontier cells as purple to show the choices available
     for(let iter = 0; iter < frontier.length; iter++) {
-        // ctx.fillStyle = "rgba(49, 206, 1, 1)";
-        // ctx.fillRect(x_coord(frontier[iter][1]),y_coord(frontier[iter][0]),cell_width,cell_height);
         fill_cell(x_coord(frontier[iter][1]),y_coord(frontier[iter][0]),"rgba(49, 206, 1, 1)");
     }
-    await wait(delay);
+    await wait(generate_maze_delay);
     
     //choose a random frontier
     let chosen_frontier = Math.floor(Math.random()*frontier.length);
@@ -113,14 +111,12 @@ const generate_maze = async (frontier,grid) => {
     col_index = frontier[chosen_frontier][1];
     
     //mark the frontier cell chosen as black for visualization
-    ctx.fillStyle = "rgb(0,0,0)";
-    ctx.fillRect(x_coord(col_index),y_coord(row_index),cell_width,cell_height);
-    await wait(delay);
+    fill_cell(x_coord(col_index),y_coord(row_index),"rgb(0,0,0)");
+    await wait(generate_maze_delay);
     
     //turn it back to purple 
-    ctx.fillStyle = "rgba(49, 206, 1, 1)";
-    ctx.fillRect(x_coord(col_index),y_coord(row_index),cell_width,cell_height);
-    await wait(delay);
+    fill_cell(x_coord(col_index),y_coord(row_index),"rgb(49,206,1)");
+    await wait(generate_maze_delay);
     
     //pop out the chosen frontier(current cell) from the frontier list
     let temp = frontier[chosen_frontier];
@@ -207,13 +203,13 @@ const generate_maze = async (frontier,grid) => {
     //update the grid
     draw_grid(grid,"blue","grey");
     
-    await wait(delay);
+    await wait(generate_maze_delay);
     
     //base case when there are no frontier cells
     if(frontier.length === 0)
         return;
     
-    generate_maze(frontier,grid);
+    await generate_maze(frontier,grid);
 }
 
 const draw_empty_grid = () => {
@@ -270,7 +266,7 @@ const dfs = async (row_index,col_index,solution_path,goal,grid) => {
 }
 
 
-const insert_priority_queue = (insertion_element,frontier_queue,cell_params) => {
+const insert_frontier_queue_djikstra = (insertion_element,frontier_queue,cell_params) => {
     //start from the last element !! here the last element index will be length because we insert an element
     let iter = frontier_queue.length;
     
@@ -279,10 +275,48 @@ const insert_priority_queue = (insertion_element,frontier_queue,cell_params) => 
 
     while(iter - 1 >= 0) {
         //if iter - 1 element has cost greater than insertion element insert the element in the current iter and break the loop
-        if(cell_params[frontier_queue[iter - 1][0]][frontier_queue[iter - 1][1]] > cell_params[insertion_element[0]][insertion_element[1]].cost) {
+        if(cell_params[frontier_queue[iter - 1][0]][frontier_queue[iter - 1][1]].cost > cell_params[insertion_element[0]][insertion_element[1]].cost) {
             frontier_queue[iter][0] = insertion_element[0];
             frontier_queue[iter][1] = insertion_element[1];
             break;
+        }
+        else {//else move the iter - 1 element to iter
+            frontier_queue[iter][0] = frontier_queue[iter -1][0];
+            frontier_queue[iter][1] = frontier_queue[iter -1][1];
+        }
+        //move iter to iter -1
+        iter --;
+    }
+    if(iter === 0) {
+        frontier_queue[iter][0] = insertion_element[0];
+        frontier_queue[iter][1] = insertion_element[1];
+    }
+};
+
+const insert_frontier_queue_a_star = (insertion_element,frontier_queue,cell_params) => {
+    //start from the last element !! here the last element index will be length because we insert an element
+    let iter = frontier_queue.length;
+    
+    //push a dummy element in the last (to create an extra element)
+    frontier_queue.push([0,0]);
+
+    while(iter - 1 >= 0) {
+        //if iter - 1 element has cost greater than insertion element insert the element in the current iter and break the loop
+        if(cell_params[frontier_queue[iter - 1][0]][frontier_queue[iter - 1][1]].total_cost > cell_params[insertion_element[0]][insertion_element[1]].total_cost) {
+            frontier_queue[iter][0] = insertion_element[0];
+            frontier_queue[iter][1] = insertion_element[1];
+            break;
+        }
+        else if(cell_params[frontier_queue[iter - 1][0]][frontier_queue[iter - 1][1]].total_cost === cell_params[insertion_element[0]][insertion_element[1]].total_cost) {
+            if(cell_params[frontier_queue[iter - 1][0]][frontier_queue[iter - 1][1]].heuristic > cell_params[insertion_element[0]][insertion_element[1]].heuristic) {
+                frontier_queue[iter][0] = insertion_element[0];
+                frontier_queue[iter][1] = insertion_element[1];
+                break;
+            }
+            else {
+                frontier_queue[iter][0] = frontier_queue[iter -1][0];
+                frontier_queue[iter][1] = frontier_queue[iter -1][1];
+            }
         }
         else {//else move the iter - 1 element to iter
             frontier_queue[iter][0] = frontier_queue[iter -1][0];
@@ -337,7 +371,7 @@ const djikstra = async (cell_params, frontier_queue,goal, grid) => {
             cell_params[row_index - 1][col_index].cost = cell_params[row_index][col_index].cost + 1;
             cell_params[row_index - 1][col_index].source = [row_index,col_index];
             //insert in priority queue such that it stays in descending order
-            insert_priority_queue([row_index - 1,col_index],frontier_queue,cell_params);           
+            insert_frontier_queue_djikstra([row_index - 1,col_index],frontier_queue,cell_params);           
         }
     }
     //right
@@ -346,7 +380,7 @@ const djikstra = async (cell_params, frontier_queue,goal, grid) => {
             cell_params[row_index][col_index + 1].cost = cell_params[row_index][col_index].cost + 1;
             cell_params[row_index][col_index + 1].source = [row_index,col_index];
             //insert in priority queue such that it stays in descending order       
-            insert_priority_queue([row_index,col_index + 1],frontier_queue,cell_params);     
+            insert_frontier_queue_djikstra([row_index,col_index + 1],frontier_queue,cell_params);     
         }
     }
     //down
@@ -355,7 +389,7 @@ const djikstra = async (cell_params, frontier_queue,goal, grid) => {
             cell_params[row_index + 1][col_index].cost = cell_params[row_index][col_index].cost + 1;
             cell_params[row_index + 1][col_index].source = [row_index,col_index];
             //insert in priority queue such that it stays in descending order      
-            insert_priority_queue([row_index + 1,col_index],frontier_queue,cell_params);      
+            insert_frontier_queue_djikstra([row_index + 1,col_index],frontier_queue,cell_params);      
         }
     }
     //left
@@ -364,7 +398,7 @@ const djikstra = async (cell_params, frontier_queue,goal, grid) => {
             cell_params[row_index][col_index - 1].cost = cell_params[row_index][col_index].cost + 1;
             cell_params[row_index][col_index - 1].source = [row_index,col_index];
             //insert in priority queue such that it stays in descending order    
-            insert_priority_queue([row_index,col_index -1],frontier_queue,cell_params);        
+            insert_frontier_queue_djikstra([row_index,col_index -1],frontier_queue,cell_params);        
         }
     }
 
@@ -373,63 +407,103 @@ const djikstra = async (cell_params, frontier_queue,goal, grid) => {
         return true;
     return false;
 }
+
+
+//cell params[][] = [{cost:f(n)}];
+//mark the cost of all the cells as infinity except the starting cell which we we'll mark it as rows + cols
+//ideally we should mark it as h(n) the estimate of them dist it would have to travel from here to the goal because g(n) = 0;
+//f(n) = g(n) + h(n)
+//we'll pick h(n) to be the manhattan distance
+const calculate_heuristic = (row_index,col_index,goal) => {
+    return Math.floor(goal[0] - row_index) + Math.floor(goal[1] - col_index);
+}
+
+const a_star = async (frontier_queue,cell_params, goal, grid) => {
+    //base case : if frontier list is empty no soln for the given maze
+    if(frontier_queue.length === 0)
+        return false;
+
+    for(let iter = 0; iter < frontier_queue.length; iter++) {
+        fill_cell(x_coord(frontier_queue[iter][1]),y_coord(frontier_queue[iter][0]),"purple");
+        ctx.font = `${cell_height/2}px Monospace`
+        ctx.fillStyle = "white";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(cell_params[frontier_queue[iter][0]][frontier_queue[iter][1]].total_cost,x_coord(frontier_queue[iter][1]) + cell_width/2 ,y_coord(frontier_queue[iter][0]) + cell_height/2);
+    }
+    await wait(delay);
+
+    //pick the frontier with least cost
+    //we'll be storing the frontier cells in descending order to make deletion efficient
+    row_index = frontier_queue[frontier_queue.length - 1][0];
+    col_index = frontier_queue[frontier_queue.length - 1][1];
+
+    //remove the chosen cell from frontier cells
+    frontier_queue.pop();
+
+    fill_cell(x_coord(col_index),y_coord(row_index),"black");
+    await wait(delay);
+
+    //mark the current cell as visited
+    grid[row_index][col_index].visited = true;
+    draw_grid(grid,"green","grey");
+    await wait(delay);
+
+    //check if the current cell is the goal cell if yes return true
+    if(row_index === goal[0] && col_index === goal[1])
+        return true;
+
+    //explore all it's neighbors and calculate their costs and store it..
+    //up
+    if(row_index - 1 >= 0 && grid[row_index][col_index].border[0] === false && grid[row_index - 1][col_index].visited === false) {
+        cell_params[row_index - 1][col_index].actual_cost = cell_params[row_index][col_index].actual_cost + 1;
+        cell_params[row_index - 1][col_index].heuristic = calculate_heuristic(row_index -1,col_index,goal);
+        cell_params[row_index - 1][col_index].total_cost = cell_params[row_index - 1][col_index].actual_cost + cell_params[row_index -1][col_index].heuristic;
+        cell_params[row_index - 1][col_index].source = [row_index,col_index];
+        insert_frontier_queue_a_star([row_index -1,col_index],frontier_queue,cell_params);
+    }
+    //right
+    if(col_index + 1 < cols && grid[row_index][col_index].border[1] === false && grid[row_index][col_index + 1].visited === false) {
+        cell_params[row_index][col_index + 1].actual_cost = cell_params[row_index][col_index].actual_cost + 1;
+        cell_params[row_index][col_index + 1].heuristic = calculate_heuristic(row_index,col_index + 1,goal);
+        cell_params[row_index][col_index + 1].total_cost = cell_params[row_index][col_index + 1].actual_cost + cell_params[row_index][col_index + 1].heuristic;
+        cell_params[row_index][col_index + 1].source = [row_index,col_index];
+        insert_frontier_queue_a_star([row_index,col_index + 1],frontier_queue,cell_params);
+    }
+    //down
+    if(row_index + 1 < rows && grid[row_index][col_index].border[2] === false && grid[row_index + 1][col_index].visited === false) {      
+        cell_params[row_index + 1][col_index].actual_cost = cell_params[row_index][col_index].actual_cost + 1;
+        cell_params[row_index + 1][col_index].heuristic = calculate_heuristic(row_index + 1,col_index,goal);
+        cell_params[row_index + 1][col_index].total_cost = cell_params[row_index + 1][col_index].actual_cost + cell_params[row_index + 1][col_index].heuristic;
+        cell_params[row_index + 1][col_index].source = [row_index,col_index];
+        insert_frontier_queue_a_star([row_index + 1,col_index],frontier_queue,cell_params);
+    }
+    //left
+    if(col_index - 1 >= 0 && grid[row_index][col_index].border[3] === false && grid[row_index][col_index - 1].visited === false) {
+        cell_params[row_index][col_index - 1].actual_cost = cell_params[row_index][col_index].actual_cost + 1;
+        cell_params[row_index][col_index - 1].heuristic = calculate_heuristic(row_index,col_index - 1,goal);
+        cell_params[row_index][col_index - 1].total_cost = cell_params[row_index][col_index - 1].actual_cost + cell_params[row_index][col_index - 1].heuristic;
+        cell_params[row_index][col_index - 1].source = [row_index,col_index];
+        insert_frontier_queue_a_star([row_index,col_index -1],frontier_queue,cell_params);
+    }
+
+    //repeat.. 
+    if(await a_star(frontier_queue,cell_params,goal,grid) === true)
+        return true;
+    return false;
+}
+
 //flow of functions
 draw_empty_grid();
 let grid = initialize_grid();
 
 const start_maze_generation = document.getElementById("generate_maze");
-start_maze_generation.addEventListener("click",() => {
+start_maze_generation.addEventListener("click",async () => {
     grid = initialize_grid();
     draw_grid(grid,"grey","grey");
     let frontier = [[0,cols - 1]];
-    generate_maze(frontier,grid);
-});
-
-const start_djikstra = document.getElementById("djikstra");
-start_djikstra.addEventListener("click", async () => {
-    let cell_params = [];
-    let cell_params_row = [];
-    for(iter = 0; iter < rows; iter++) {
-        for(inner_iter = 0; inner_iter < cols; inner_iter++) {
-            //initialize the cost of every cell to infinity.. here we know cost can't exceed the no of cells hence cost = row*cols + 1
-            cell_params_row.push({cost : rows*cols + 1,source : [rows,cols]});
-        }
-        cell_params.push(cell_params_row);
-        cell_params_row = [];
-    }
-
-    //set the cost of starting pt as 0 because we are already there..
-    cell_params[starting_cell[0]][starting_cell[1]].cost = 0;
-
-    let frontier_queue = [starting_cell]; //store items in descending order to make deletions more efficient
-    for(let row_index = 0; row_index < rows; row_index++) {
-        for(let col_index = 0; col_index < cols; col_index++) {
-            grid[row_index][col_index].visited = false;
-        }
-    }
-    
-    if(await djikstra(cell_params,frontier_queue,goal,grid) === true) {
-        let row_index = goal[0];
-        let col_index = goal[1];
-        
-        for(let row_index = 0; row_index < rows; row_index++) {
-            for(let col_index = 0; col_index < cols; col_index++) {
-                grid[row_index][col_index].visited = false;
-            }
-        }
-        let temp_row_index;
-        while(!(row_index === 0 && col_index === 0)) {
-            grid[row_index][col_index].visited = true;
-            temp_row_index = cell_params[row_index][col_index].source[0];
-            col_index = cell_params[row_index][col_index].source[1];
-            row_index = temp_row_index;
-            draw_grid(grid,"orange","grey");
-            await wait(delay);
-        }
-        grid[row_index][col_index].visited = true;
-        draw_grid(grid,"orange","grey");
-        await wait(delay);
-    }
+    await generate_maze(frontier,grid);
+    draw_grid(grid,"grey","grey");
 });
 
 const start_dfs = document.getElementById("dfs");
@@ -446,7 +520,7 @@ start_dfs.addEventListener('click',async () => {
     for(let iter = solution_path.length - 1; iter >= 0; iter--) {
         let x_pos = x_coord(solution_path[iter][1]);
         let y_pos = y_coord(solution_path[iter][0]);
-        fill_cell(x_pos,y_pos,"purple");
+        fill_cell(x_pos,y_pos,"rgba(21, 0, 159, 1)");
         for(let inner_iter = 0; inner_iter < 4; inner_iter++) {
             if(grid[solution_path[iter][0]][solution_path[iter][1]].border[inner_iter]) {
                 if(inner_iter === 0)
@@ -473,7 +547,7 @@ start_dfs.addEventListener('click',async () => {
     for(let iter = solution_path.length - 1; iter >= 0; iter--) {
         let x_pos = x_coord(solution_path[iter][1]);
         let y_pos = y_coord(solution_path[iter][0]);
-        fill_cell(x_pos,y_pos,"purple");
+        fill_cell(x_pos,y_pos,"rgba(21, 0, 159, 1)");
         for(let inner_iter = 0; inner_iter < 4; inner_iter++) {
             if(grid[solution_path[iter][0]][solution_path[iter][1]].border[inner_iter]) {
                 if(inner_iter === 0)
@@ -486,5 +560,98 @@ start_dfs.addEventListener('click',async () => {
                     draw_line(x_pos,y_pos + cell_height,x_pos,y_pos,"white");
             }
         }
+    }
+});
+
+const start_djikstra = document.getElementById("djikstra");
+start_djikstra.addEventListener("click", async () => {
+    let cell_params = [];
+    let cell_params_row = [];
+    for(iter = 0; iter < rows; iter++) {
+        for(inner_iter = 0; inner_iter < cols; inner_iter++) {
+            //initialize the cost of every cell to infinity.. here we know cost can't exceed the no of cells hence cost = row*cols + 1
+            cell_params_row.push({cost : rows*cols,source : [rows,cols]});
+        }
+        cell_params.push(cell_params_row);
+        cell_params_row = [];
+    }
+
+    //set the cost of starting pt as 0 because we are already there..
+    cell_params[starting_cell[0]][starting_cell[1]].cost = 0;
+
+    let frontier_queue = [starting_cell]; //store items in descending order to make deletions more efficient
+    for(let row_index = 0; row_index < rows; row_index++) {
+        for(let col_index = 0; col_index < cols; col_index++) {
+            grid[row_index][col_index].visited = false;
+        }
+    }
+    
+    if(await djikstra(cell_params,frontier_queue,goal,grid) === true) {
+        let row_index = goal[0];
+        let col_index = goal[1];
+        
+        for(let row_index = 0; row_index < rows; row_index++) {
+            for(let col_index = 0; col_index < cols; col_index++) {
+                grid[row_index][col_index].visited = false;
+            }
+        }
+        let temp_row_index;
+        while(!(row_index === starting_cell[0] && col_index === starting_cell[1])) {
+            grid[row_index][col_index].visited = true;
+            temp_row_index = cell_params[row_index][col_index].source[0];
+            col_index = cell_params[row_index][col_index].source[1];
+            row_index = temp_row_index;
+            draw_grid(grid,"rgba(21, 0, 159, 1)","grey");
+            await wait(delay);
+        }
+        grid[row_index][col_index].visited = true;
+        draw_grid(grid,"rgba(21, 0, 159, 1)","grey");
+        await wait(delay);
+    }
+});
+
+const start_a_star = document.getElementById("a_star");
+start_a_star.addEventListener("click",async () => {
+    let cell_params = [];
+    let cell_params_row = [];
+    for(iter = 0; iter < rows; iter++) {
+        for(inner_iter = 0; inner_iter < cols; inner_iter++) {
+            //initialize the cost of every cell to infinity.. here we know cost can't exceed the no of cells hence cost = row*cols + 1
+            cell_params_row.push({total_cost : rows*cols, actual_cost : rows*cols, heuristic : rows*cols, source : [rows,cols]});
+        }
+        cell_params.push(cell_params_row);
+        cell_params_row = [];
+    }
+    cell_params[starting_cell[0]][starting_cell[1]].total_cost = calculate_heuristic(starting_cell[0],starting_cell[1],goal);
+    cell_params[starting_cell[0]][starting_cell[1]].actual_cost = 0;
+
+    for(let row_index = 0; row_index < rows; row_index++) {
+        for(let col_index = 0; col_index < cols; col_index++) {
+            grid[row_index][col_index].visited = false;
+        }
+    }
+    let frontier_queue = [[starting_cell[0],starting_cell[1]]];
+    
+    if(await a_star(frontier_queue,cell_params,goal,grid) === true) {
+        let row_index = goal[0];
+        let col_index = goal[1];
+        
+        for(let row_index = 0; row_index < rows; row_index++) {
+            for(let col_index = 0; col_index < cols; col_index++) {
+                grid[row_index][col_index].visited = false;
+            }
+        }
+        let temp_row_index;
+        while(!(row_index === starting_cell[0] && col_index === starting_cell[1])) {
+            grid[row_index][col_index].visited = true;
+            temp_row_index = cell_params[row_index][col_index].source[0];
+            col_index = cell_params[row_index][col_index].source[1];
+            row_index = temp_row_index;
+            draw_grid(grid,"rgba(21, 0, 159, 1)","grey");
+            await wait(delay);
+        }
+        grid[row_index][col_index].visited = true;
+        draw_grid(grid,"rgba(21, 0, 159, 1)","grey");
+        await wait(delay);
     }
 });
