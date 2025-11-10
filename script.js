@@ -11,8 +11,8 @@ else {
 }
 let height = canvas.width - 2;
 let width = canvas.width - 2;
-let rows = 10;
-let cols = 10;
+let rows = 15;
+let cols = 15;
 let cell_height = height/rows;
 let cell_width = width/cols;
 let starting_cell = [1,1];
