@@ -1,29 +1,83 @@
+* {
+    box-sizing: border-box;
+}
 body {
     background-color: rgb(36, 36, 36);
-    padding-left : 40px;
     font-family: monospace ;
+    color : white;
+    margin : 0;
 }
 
 h1 {
-    font-size : 4vw;
+    font-size : 3rem;
     color : rgb(241, 204, 18);
+    margin:10px 15px 10px 15px;
 }
 
 .buttons{
-    background: rgb(241, 204, 18);
-    border-radius: 1vw;
+    background-color: rgb(241, 204, 18);
     align-items: center;
-    display: grid;
+    display: flex;
     justify-content: center;
-    color: darkslategrey;
-    padding-top:0.5vw;
-    padding-bottom:0.5vw;
-    padding-left:2vw;
-    padding-right:2vw;
-    font-size: 2vw;
+    color: rgb(36, 36, 36);
+    flex-grow : 1;
+    flex-shrink: 1;
+    flex-basis: auto;
+    border-radius: 5px;
+    font-size:1.5rem;
+    border-style:none;
 }
 
-#options{
-    padding-top:1vw;
+h2 {
+    font-size : 1.5rem;
+}
+#wrapper {
+    display : flex;
+    flex-wrap : nowrap;
+    /* flex-direction: column; */
+    /* flex-wrap:wrap; */
+}
+
+#description{
     display:flex;
+    flex-wrap: wrap;
+    flex-direction: column;
+    margin : 10px;
+}
+
+#options {
+    display:flex;
+    gap : 0.2rem;
+    flex-wrap : wrap;
+}
+
+#canvas {
+    margin : 10px 10px 10px 15px;
+}
+ul {
+    padding:0;
+    font-size:1.5rem;
+
+}
+
+li{
+    list-style: none;
+}
+
+@media (max-width : 800px) {
+    #wrapper{
+        flex-wrap : wrap;
+        justify-content: center;
+        gap : 0;
+    }
+    h1 {
+        font-size : 1.5rem;
+        margin : 10px;
+    }
+    #canvas {
+        margin : 10px;
+    }
+    #description {
+        margin-top: 0;
+    }
 }

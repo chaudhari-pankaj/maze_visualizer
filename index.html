@@ -8,12 +8,18 @@
 </head>
 <body>
     <h1>maze visualizer</h1>
-    <div id = "maze"></div>
-    <div id = "options">
-        <button id = "generate_maze" class = "buttons">generate a maze</button>
-        <button id = "dfs" class = "buttons">solve using dfs</button>
-        <button id = "djikstra" class = "buttons">solve using djikstra</button>
-        <button id = "a_star" class = "buttons">solve using a*</button>
+    <div id = "wrapper">
+        <canvas id = "canvas"></canvas>
+        <div id = "description">
+            <div id = "options">
+                <button id = "maze_generation" class = "buttons">Generate a maze</button>
+                <button id = "dfs" class = "buttons">Depth first Search</button>
+                <button id = "djikstra" class = "buttons">Djikstra Algorithm</button>
+                <button id = "a_star" class = "buttons">A* Algorithm</button>
+            </div>
+            <div id = "about">
+            </div>
+        </div>
     </div>
     <script src = "script.js"></script>
 </body>

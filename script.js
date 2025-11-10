@@ -1,12 +1,22 @@
+const canvas = document.getElementById("canvas");
+
 //!!important parameters of maze visualizer
-const height = 500;
-const width = 500; 
-const rows = 20;
-const cols = 20;
-const cell_height = height/rows;
-const cell_width = width/cols;
-const starting_cell = [1,1];
-const goal = [rows -2,cols -2];
+if(window.innerWidth > 502 + 20) {
+    canvas.height = 502;
+    canvas.width = 502;
+}
+else {
+    canvas.height = window.innerWidth - 20;
+    canvas.width = window.innerWidth -20;
+}
+let height = canvas.width - 2;
+let width = canvas.width - 2;
+let rows = 10;
+let cols = 10;
+let cell_height = height/rows;
+let cell_width = width/cols;
+let starting_cell = [1,1];
+let goal = [rows -2,cols -2];
 let delay = 10; //delay in milliseconds between each step for better visualization
 let generate_maze_delay = 0;
 
@@ -18,8 +28,9 @@ const generate_canvas = (width,height) => {
     maze.appendChild(canvas);
     return canvas;
 };
-const canvas = generate_canvas(width,height);
+// const canvas = generate_canvas(width,height);
 const ctx = canvas.getContext("2d");
+ctx.translate(1,1);
 
 const x_coord = (col_index) => {
     return col_index * cell_width;
@@ -98,7 +109,7 @@ const generate_maze = async (frontier,grid) => {
     
     //mark all the frontier cells as purple to show the choices available
     for(let iter = 0; iter < frontier.length; iter++) {
-        fill_cell(x_coord(frontier[iter][1]),y_coord(frontier[iter][0]),"rgba(49, 206, 1, 1)");
+        fill_cell(x_coord(frontier[iter][1]),y_coord(frontier[iter][0]),"purple");
     }
     await wait(generate_maze_delay);
     
@@ -115,7 +126,7 @@ const generate_maze = async (frontier,grid) => {
     await wait(generate_maze_delay);
     
     //turn it back to purple 
-    fill_cell(x_coord(col_index),y_coord(row_index),"rgb(49,206,1)");
+    fill_cell(x_coord(col_index),y_coord(row_index),"purple");
     await wait(generate_maze_delay);
     
     //pop out the chosen frontier(current cell) from the frontier list
@@ -201,7 +212,7 @@ const generate_maze = async (frontier,grid) => {
     }
     
     //update the grid
-    draw_grid(grid,"blue","grey");
+    draw_grid(grid,"green","rgb(36, 36, 36)");
     
     await wait(generate_maze_delay);
     
@@ -214,7 +225,7 @@ const generate_maze = async (frontier,grid) => {
 
 const draw_empty_grid = () => {
     let grid = initialize_grid();
-    draw_grid(grid,"grey","grey");
+    draw_grid(grid,"rgb(36, 36, 36)","rgb(36, 36, 36)");
 }
 
 
@@ -231,7 +242,7 @@ const dfs = async (row_index,col_index,solution_path,goal,grid) => {
     //mark the current cell as visited;
     solution_path.push([row_index,col_index]);
     grid[row_index][col_index].visited = true;
-    draw_grid(grid,"green","grey");
+    draw_grid(grid,"green","rgb(36, 36, 36)");
     await wait(delay);
 
     //checking if the current cell has reached the goal
@@ -356,7 +367,7 @@ const djikstra = async (cell_params, frontier_queue,goal, grid) => {
 
     //mark the chosen element as visited
     grid[row_index][col_index].visited = true;
-    draw_grid(grid,"green","grey");
+    draw_grid(grid,"green","rgb(36, 36, 36)");
     await wait(delay);
 
     //check if the chosen element is the goal if yes return true
@@ -446,7 +457,7 @@ const a_star = async (frontier_queue,cell_params, goal, grid) => {
 
     //mark the current cell as visited
     grid[row_index][col_index].visited = true;
-    draw_grid(grid,"green","grey");
+    draw_grid(grid,"green","rgb(36, 36, 36)");
     await wait(delay);
 
     //check if the current cell is the goal cell if yes return true
@@ -497,17 +508,22 @@ const a_star = async (frontier_queue,cell_params, goal, grid) => {
 draw_empty_grid();
 let grid = initialize_grid();
 
-const start_maze_generation = document.getElementById("generate_maze");
+let about = document.getElementById("about");
+about.innerHTML = "<h2>Randomized Prim's algorigthm</h2> <ul> >> pick the starting cell and mark it as visited <li> >> add all it's non visited neighbors as frontiers </li><li> >> pick a random frontier and remove the wall between itself and already exisitng maze </li><li>>> go to step one and repeat all the steps till you run out of frontiers</li> </ul>";
+
+const start_maze_generation = document.getElementById("maze_generation");
 start_maze_generation.addEventListener("click",async () => {
+    about.innerHTML = "<h2>Randomized Prim's algorigthm</h2> <ul> >> pick the starting cell and mark it as visited <li> >> add all it's non visited neighbors as frontiers </li><li> >> pick a random frontier and remove the wall between itself and already exisitng maze </li><li>>> go to step one and repeat all the steps till you run out of frontiers</li> </ul>";
     grid = initialize_grid();
-    draw_grid(grid,"grey","grey");
+    draw_grid(grid,"rgb(36, 36, 36)","rgb(36, 36, 36)");
     let frontier = [[0,cols - 1]];
     await generate_maze(frontier,grid);
-    draw_grid(grid,"grey","grey");
+    draw_grid(grid,"rgb(36, 36, 36)","rgb(36, 36, 36)");
 });
 
 const start_dfs = document.getElementById("dfs");
 start_dfs.addEventListener('click',async () => {
+    about.innerHTML = "<h2>Depth first search algorithm</h2><ul><li>>> go to the starting cell and mark it as visited</li><li>>> add it to the soluion</li><li>>> pick all of it's unvisited neighbors on at a time and repeat all the steps from step 1 until you reach the goal or don't have any unvisited cells</li></ul>"
     let solution_path = [];
     for(let row_index = 0; row_index < rows; row_index++) {
         for(let col_index = 0; col_index < cols; col_index++) {
@@ -542,7 +558,7 @@ start_dfs.addEventListener('click',async () => {
         }
     }
     
-    await draw_grid(grid,"grey","grey");
+    await draw_grid(grid,"rgb(36, 36, 36)","rgb(36, 36, 36)");
 
     for(let iter = solution_path.length - 1; iter >= 0; iter--) {
         let x_pos = x_coord(solution_path[iter][1]);
@@ -565,6 +581,7 @@ start_dfs.addEventListener('click',async () => {
 
 const start_djikstra = document.getElementById("djikstra");
 start_djikstra.addEventListener("click", async () => {
+    about.innerHTML = "<h2>Djikstra Algorithm</h2><ul><li>>> Initialize the cost of every cell as infinity because we currently don't know about the cost it going to take to visit them</li><li>>> Add the starting cell to the frontiers and set it's cost as zero because it's distance from the start is zero</li><li>>> Mark it as visited</li><li>>> For each of it's unvisited neighbors, if the cost of reaching them via the current cell is less then what it was earlier, update it</li><li>>> Add all of it's unvisited neighbors to the frontier list</li><li>>> Choose the frontier with least cost and repeat the steps from step 2</li></ul>";
     let cell_params = [];
     let cell_params_row = [];
     for(iter = 0; iter < rows; iter++) {
@@ -601,17 +618,18 @@ start_djikstra.addEventListener("click", async () => {
             temp_row_index = cell_params[row_index][col_index].source[0];
             col_index = cell_params[row_index][col_index].source[1];
             row_index = temp_row_index;
-            draw_grid(grid,"rgba(21, 0, 159, 1)","grey");
+            draw_grid(grid,"rgba(21, 0, 159, 1)","rgb(36, 36, 36)");
             await wait(delay);
         }
         grid[row_index][col_index].visited = true;
-        draw_grid(grid,"rgba(21, 0, 159, 1)","grey");
+        draw_grid(grid,"rgba(21, 0, 159, 1)","rgb(36, 36, 36)");
         await wait(delay);
     }
 });
 
 const start_a_star = document.getElementById("a_star");
 start_a_star.addEventListener("click",async () => {
+    about.innerHTML = "<h2>A* Algorithm</h2><ul><li>>> Initialize every cells cost as infinity because we don't know how much it will cost to reach them</li><li>>> Add the starting cell to frontier list and make it's total cost as it's heuristic</li><li>>> Mark it as visited</li><li>>> For each of it's unvisited neighbors calculate it's total cost and add them to frontier list</li><li>>> pick a cell which has the least total_cost as of now and repeat all the steps from step 3</li></ul>";
     let cell_params = [];
     let cell_params_row = [];
     for(iter = 0; iter < rows; iter++) {
@@ -647,11 +665,32 @@ start_a_star.addEventListener("click",async () => {
             temp_row_index = cell_params[row_index][col_index].source[0];
             col_index = cell_params[row_index][col_index].source[1];
             row_index = temp_row_index;
-            draw_grid(grid,"rgba(21, 0, 159, 1)","grey");
+            draw_grid(grid,"rgba(21, 0, 159, 1)","rgb(36, 36, 36)");
             await wait(delay);
         }
         grid[row_index][col_index].visited = true;
-        draw_grid(grid,"rgba(21, 0, 159, 1)","grey");
+        draw_grid(grid,"rgba(21, 0, 159, 1)","rgb(36, 36, 36)");
         await wait(delay);
+    }
+});
+
+window.addEventListener("resize",() => {
+    if(window.innerWidth > 502 + 20) {
+        canvas.height = 502;
+        canvas.width = 502;
+        height = canvas.width - 2;
+        width = canvas.width -2;
+        cell_height = height/rows;
+        cell_width = width/cols;
+        draw_grid(grid,"green","rgb(36, 36, 36)");
+    }
+    else {
+        canvas.height = window.innerWidth - 20;
+        canvas.width = window.innerWidth -20;
+        height = canvas.width - 2;
+        width = canvas.width -2;
+        cell_height = height/rows;
+        cell_width = width/cols;
+        draw_grid(grid,"green","rgb(36, 36, 36)");
     }
 });
